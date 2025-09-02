@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>People</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 24px auto; }
+    form, .row { margin: 12px 0; display: flex; gap: 8px; }
+    input { padding: 6px; flex: 1; }
+    button { padding: 6px 10px; cursor: pointer; }
+    ul { padding-left: 18px; }
+  </style>
+</head>
+<body>
+  <h1>People (Name + Age)</h1>
+
+  <form id="saveForm">
+    <input id="name" placeholder="Name" required />
+    <input id="age" type="number" placeholder="Age" required />
+    <button type="submit">Save</button>
+  </form>
+
+  <div class="row">
+    <input id="q" placeholder="Search by name or age" />
+    <button id="btnSearch" type="button">Search</button>
+    <button id="btnAll" type="button" title="Show all">Show all</button>
+  </div>
+
+  <h3>Results</h3>
+  <ul id="list"></ul>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const listEl = $("list");
+
+    function render(items) {
+      listEl.innerHTML = "";
+      if (!items.length) { listEl.innerHTML = "<li>No results</li>"; return; }
+      for (const p of items) {
+        const li = document.createElement("li");
+        li.textContent = `${p.name}, ${p.age}`;
+        listEl.appendChild(li);
+      }
+    }
+
+    async function loadAll() {
+      const r = await fetch("/people");
+      render(await r.json());
+    }
+
+    $("saveForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = $("name").value.trim();
+      const age  = $("age").value.trim();
+      if (!name || !age) return;
+      const r = await fetch("/people", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, age: Number(age) })
+      });
+      if (!r.ok) { alert("Save failed"); return; }
+      $("saveForm").reset();
+      await loadAll();
+    });
+
+    $("btnSearch").addEventListener("click", async () => {
+      const q = $("q").value.trim();
+      if (!q) { loadAll(); return; }
+      const r = await fetch(`/people/search?q=${encodeURIComponent(q)}`);
+      render(await r.json());
+    });
+
+    $("btnAll").addEventListener("click", loadAll);
+
+    loadAll();
+  </script>
+</body>
+</html>
