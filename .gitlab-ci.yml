@@ -1,0 +1,15 @@
+stages: [deploy]
+
+variables:
+  APP_DIR: "/home/xuser/people-app-file"
+
+deploy:
+  stage: deploy
+  tags: [people, runner]   # must match the tags of your runner
+  only: [main]             # run only on pushes to main branch
+  script:
+    - mkdir -p "$APP_DIR"
+    - rsync -az --delete "$CI_PROJECT_DIR"/ "$APP_DIR"/
+    - cd "$APP_DIR"
+    - npm install
+    - npm start
