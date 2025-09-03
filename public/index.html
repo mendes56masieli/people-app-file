@@ -20,21 +20,32 @@
       background-size: cover, cover;
     }
     .panel {
-      background: rgba(255, 255, 255, 0.3);
-      color: #111;
-      border-radius: 12px;
-      padding: 16px 18px;
+      /* Panel image: uses frog.jpg if present, falls back to forest.jpg */
+      background-image:
+        linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.2) 35%, rgba(0,0,0,0.2) 65%, rgba(0,0,0,0.45) 100%),
+        url('frog.jpg'),
+        url('forest.jpg');
+      background-repeat: no-repeat, no-repeat, no-repeat;
+      background-size: cover, cover, cover;
+      background-position: center, center, center;
+      color: #fff;
+      border-radius: 14px;
+      padding: 18px 20px;
       margin: 24px auto;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-      border: 1px solid rgba(0,0,0,0.06);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.28);
+      border: 1px solid rgba(255,255,255,0.2);
+      overflow: hidden;
     }
+    .panel h1, .panel h3 { text-shadow: 0 1px 2px rgba(0,0,0,0.6); }
     h1 { margin-top: 0; }
     form, .row { margin: 12px 0; display: flex; gap: 8px; }
     input { padding: 8px 10px; flex: 1; border: 1px solid #cfd8d3; border-radius: 8px; }
     button { padding: 8px 12px; cursor: pointer; border-radius: 8px; border: 1px solid #b6c3bd; background: #e8f2ee; }
     button:hover { background: #d9ebe5; }
+    /* Tune controls inside the image panel for readability */
+    .panel input { background: rgba(255,255,255,0.92); color: #111; border-color: rgba(255,255,255,0.7); }
+    .panel button { background: rgba(255,255,255,0.18); color: #fff; border-color: rgba(255,255,255,0.4); }
+    .panel button:hover { background: rgba(255,255,255,0.28); }
     ul { padding-left: 18px; }
   </style>
 </head>
