@@ -4,6 +4,7 @@ const path = require('path');
 const multer = require('multer');
 const app = express();
 app.use(express.json());
+console.log('[startup]', { file: __filename, cwd: process.cwd() });
 
 const DATA_FILE = './data.json';
 
