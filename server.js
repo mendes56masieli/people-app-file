@@ -116,7 +116,31 @@ app.get('/debug/uploads', (_req, res) => {
 
 const PORT = process.env.PORT || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
+// Debug route: list registered routes
+app.get('/__routes', (_req, res) => {
+  const routes = [];
+  const stack = app._router && app._router.stack || [];
+  for (const layer of stack) {
+    if (layer.route) {
+      routes.push({ path: layer.route.path, methods: Object.keys(layer.route.methods) });
+    } else if (layer.name === 'router' && layer.handle && layer.handle.stack) {
+      for (const l of layer.handle.stack) {
+        if (l.route) routes.push({ path: l.route.path, methods: Object.keys(l.route.methods) });
+      }
+    }
+  }
+  res.json(routes);
+});
+
 app.listen(PORT, HOST, () => {
   const hostShown = HOST === '0.0.0.0' ? 'localhost' : HOST;
   console.log(`File server on http://${hostShown}:${PORT} (bound to ${HOST})`);
+  try {
+    const res = [];
+    const stack = app._router && app._router.stack || [];
+    for (const layer of stack) {
+      if (layer.route) res.push(layer.route.path);
+    }
+    console.log('Routes:', res.join(', '));
+  } catch {}
 });
