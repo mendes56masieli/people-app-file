@@ -114,4 +114,9 @@ app.get('/debug/uploads', (_req, res) => {
   }
 });
 
-app.listen(3000, () => console.log('File server on http://localhost:3000'));
+const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || '0.0.0.0';
+app.listen(PORT, HOST, () => {
+  const hostShown = HOST === '0.0.0.0' ? 'localhost' : HOST;
+  console.log(`File server on http://${hostShown}:${PORT} (bound to ${HOST})`);
+});
