@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>People</title>
+  <title>Gallery</title>
   <style>
     :root { color-scheme: light dark; }
     body {
@@ -57,69 +57,119 @@
     .panel button { background: rgba(255,255,255,0.18); color: #fff; border-color: rgba(255,255,255,0.4); }
     .panel button:hover { background: rgba(255,255,255,0.28); }
     ul { padding-left: 18px; }
+    .drop { margin-top: 8px; border: 2px dashed rgba(255,255,255,0.6); color: #fff; padding: 16px; border-radius: 10px; text-align: center; background: rgba(0,0,0,0.15); }
+    .drop.hover { background: rgba(0,0,0,0.25); }
+    .preview.hidden, .viewer.hidden { display: none; }
+    .preview img { max-width: 100%; border-radius: 8px; margin-top: 8px; }
+    .viewer img { max-width: 100%; border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.35); }
   </style>
 </head>
 <body>
   <div class="panel">
-    <h1>People (Name + Age)</h1>
+    <h1>Gallery (Title + Photo)</h1>
 
-    <form id="saveForm">
-      <input id="name" placeholder="Name" required />
-      <input id="age" type="number" min="0" step="1" placeholder="Age" required />
-      <button type="submit">Save</button>
+    <form id="uploadForm">
+      <input id="title" placeholder="Title" required />
+      <input id="file" type="file" accept="image/*" hidden />
+      <button id="btnPick" type="button">Choose photo</button>
+      <button type="submit">Upload</button>
     </form>
 
+    <div id="dropZone" class="drop">Drag & drop photo here</div>
+    <div id="previewWrap" class="preview hidden"><img id="preview" alt="preview" /></div>
+
     <div class="row">
-      <input id="q" placeholder="Search by name or age" />
+      <input id="q" placeholder="Search by title" />
       <button id="btnSearch" type="button">Search</button>
       <button id="btnAll" type="button" title="Show all">Show all</button>
     </div>
 
-    <h3>Results</h3>
+    <h3>Items</h3>
     <ul id="list"></ul>
+
+    <div id="viewer" class="viewer hidden">
+      <h3 id="vTitle"></h3>
+      <img id="vImg" alt="selected" />
+    </div>
   </div>
 
   <script>
     const $ = (id) => document.getElementById(id);
     const listEl = $("list");
+    const viewer = $("viewer");
+    const vImg = $("vImg");
+    const vTitle = $("vTitle");
+    const drop = $("dropZone");
+    const fileInput = $("file");
+    const preview = $("preview");
+    const previewWrap = $("previewWrap");
+    const uploadForm = $("uploadForm");
 
-    function render(items) {
+    function renderList(items) {
       listEl.innerHTML = "";
-      if (!items.length) { listEl.innerHTML = "<li>No results</li>"; return; }
-      for (const p of items) {
+      if (!items.length) { listEl.innerHTML = "<li>No results</li>"; viewer.classList.add('hidden'); return; }
+      for (const it of items) {
         const li = document.createElement("li");
-        li.textContent = `${p.name}, ${p.age}`;
+        li.textContent = it.title;
+        li.style.cursor = 'pointer';
+        li.addEventListener('click', () => showItem(it));
         listEl.appendChild(li);
       }
-    }
-// hello my friend
-// hellow you too 
-// o you cool bro
-    async function loadAll() {
-      const r = await fetch("/people");
-      render(await r.json());
+      // show first by default
+      showItem(items[0]);
     }
 
-    $("saveForm").addEventListener("submit", async (e) => {
+    function showItem(it) {
+      if (!it) return;
+      vTitle.textContent = it.title;
+      vImg.src = it.url;
+      viewer.classList.remove('hidden');
+    }
+
+    async function loadAll() {
+      const r = await fetch("/items");
+      renderList(await r.json());
+    }
+
+    uploadForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const name = $("name").value.trim();
-      const age  = $("age").value.trim();
-      if (!name || !age) return;
-      const r = await fetch("/people", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, age: Number(age) })
-      });
-      if (!r.ok) { alert("Save failed"); return; }
-      $("saveForm").reset();
+      const title = $("title").value.trim();
+      const file = fileInput.files[0];
+      if (!title || !file) { alert('Please add a title and photo'); return; }
+      const fd = new FormData();
+      fd.append('title', title);
+      fd.append('photo', file);
+      const r = await fetch('/items', { method: 'POST', body: fd });
+      if (!r.ok) { alert('Upload failed'); return; }
+      uploadForm.reset();
+      fileInput.value = '';
+      previewWrap.classList.add('hidden');
       await loadAll();
     });
+
+    $("btnPick").addEventListener('click', () => fileInput.click());
+
+    // Drag & drop support
+    function handleFiles(files) {
+      if (!files || !files.length) return;
+      const f = files[0];
+      fileInput.files = new DataTransfer().files; // reset
+      const dt = new DataTransfer();
+      dt.items.add(f);
+      fileInput.files = dt.files;
+      const url = URL.createObjectURL(f);
+      preview.src = url; previewWrap.classList.remove('hidden');
+    }
+    drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('hover'); });
+    drop.addEventListener('dragleave', () => drop.classList.remove('hover'));
+    drop.addEventListener('drop', (e) => { e.preventDefault(); drop.classList.remove('hover'); handleFiles(e.dataTransfer.files); });
+    fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
 
     $("btnSearch").addEventListener("click", async () => {
       const q = $("q").value.trim();
       if (!q) { loadAll(); return; }
-      const r = await fetch(`/people/search?q=${encodeURIComponent(q)}`);
-      render(await r.json());
+      const r = await fetch(`/items/search?q=${encodeURIComponent(q)}`);
+      renderList(await r.json());
     });
 
     $("btnAll").addEventListener("click", loadAll);

@@ -1,6 +1,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const multer = require('multer');
 const app = express();
 app.use(express.json());
 
@@ -23,6 +24,28 @@ function readAll() {
 function writeAll(arr) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(arr, null, 2));
 }
+
+// --- Simple gallery storage ---
+const ITEMS_FILE = './items.json';
+function readItems() {
+  if (!fs.existsSync(ITEMS_FILE)) return [];
+  try { return JSON.parse(fs.readFileSync(ITEMS_FILE, 'utf8') || '[]'); }
+  catch { return []; }
+}
+function writeItems(arr) { fs.writeFileSync(ITEMS_FILE, JSON.stringify(arr, null, 2)); }
+
+// ensure upload dir
+const uploadDir = path.join(__dirname, 'public', 'uploads');
+fs.mkdirSync(uploadDir, { recursive: true });
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, uploadDir),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    const id = Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+    cb(null, `${id}${ext || '.jpg'}`);
+  }
+});
+const upload = multer({ storage });
 
 // add person
 app.post('/people', (req, res) => {
@@ -50,6 +73,33 @@ app.get('/people/search', (req, res) => {
     p.name.toLowerCase().includes(q) || String(p.age).includes(q)
   );
   res.json(out);
+});
+
+// --- Gallery routes ---
+// Add item with photo (multipart/form-data: title, photo)
+app.post('/items', upload.single('photo'), (req, res) => {
+  const title = (req.body?.title || '').trim();
+  if (!title) return res.status(400).json({ error: 'title required' });
+  if (!req.file) return res.status(400).json({ error: 'photo file required' });
+  const url = '/uploads/' + req.file.filename;
+  const id = Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+  const items = readItems();
+  const item = { id, title, url, createdAt: new Date().toISOString() };
+  items.push(item);
+  writeItems(items);
+  res.status(201).json(item);
+});
+
+// List all items
+app.get('/items', (_req, res) => {
+  res.json(readItems());
+});
+
+// Search by title (q=)
+app.get('/items/search', (req, res) => {
+  const q = String(req.query.q || '').toLowerCase();
+  const items = readItems();
+  res.json(items.filter(it => it.title.toLowerCase().includes(q)));
 });
 
 app.listen(3000, () => console.log('File server on http://localhost:3000'));
