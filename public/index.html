@@ -128,8 +128,19 @@
     }
 
     async function loadAll() {
-      const r = await fetch("/items");
-      renderList(await r.json());
+      try {
+        const r = await fetch("/items");
+        if (!r.ok) {
+          const t = await r.text();
+          console.error('GET /items failed:', r.status, t);
+          alert(`Failed to load items (${r.status}). Is the server running?`);
+          return;
+        }
+        renderList(await r.json());
+      } catch (e) {
+        console.error(e);
+        alert('Network error loading items');
+      }
     }
 
     uploadForm.addEventListener("submit", async (e) => {
@@ -173,8 +184,14 @@
     $("btnSearch").addEventListener("click", async () => {
       const q = $("q").value.trim();
       if (!q) { loadAll(); return; }
-      const r = await fetch(`/items/search?q=${encodeURIComponent(q)}`);
-      renderList(await r.json());
+      try {
+        const r = await fetch(`/items/search?q=${encodeURIComponent(q)}`);
+        if (!r.ok) { const t = await r.text(); throw new Error(`${r.status} ${t}`); }
+        renderList(await r.json());
+      } catch (e) {
+        console.error('Search failed:', e);
+        alert('Search failed. Is the server running?');
+      }
     });
 
     $("btnAll").addEventListener("click", loadAll);
