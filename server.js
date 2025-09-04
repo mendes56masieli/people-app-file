@@ -78,6 +78,7 @@ app.get('/people/search', (req, res) => {
 // --- Gallery routes ---
 // Add item with photo (multipart/form-data: title, photo)
 app.post('/items', upload.single('photo'), (req, res) => {
+  console.log('POST /items received');
   const title = (req.body?.title || '').trim();
   if (!title) return res.status(400).json({ error: 'title required' });
   if (!req.file) return res.status(400).json({ error: 'photo file required' });
@@ -87,6 +88,7 @@ app.post('/items', upload.single('photo'), (req, res) => {
   const item = { id, title, url, createdAt: new Date().toISOString() };
   items.push(item);
   writeItems(items);
+  console.log('Saved item:', item);
   res.status(201).json(item);
 });
 
@@ -100,6 +102,16 @@ app.get('/items/search', (req, res) => {
   const q = String(req.query.q || '').toLowerCase();
   const items = readItems();
   res.json(items.filter(it => it.title.toLowerCase().includes(q)));
+});
+
+// Debug: list uploaded filenames
+app.get('/debug/uploads', (_req, res) => {
+  try {
+    const files = fs.readdirSync(uploadDir).sort();
+    res.json({ dir: '/uploads', count: files.length, files });
+  } catch (e) {
+    res.status(500).json({ error: String(e) });
+  }
 });
 
 app.listen(3000, () => console.log('File server on http://localhost:3000'));
