@@ -104,6 +104,7 @@
     const preview = $("preview");
     const previewWrap = $("previewWrap");
     const uploadForm = $("uploadForm");
+    let selectedFile = null; // supports drag & drop even if DataTransfer not available
 
     function renderList(items) {
       listEl.innerHTML = "";
@@ -134,15 +135,21 @@
     uploadForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const title = $("title").value.trim();
-      const file = fileInput.files[0];
+      const file = selectedFile || fileInput.files[0];
       if (!title || !file) { alert('Please add a title and photo'); return; }
       const fd = new FormData();
       fd.append('title', title);
       fd.append('photo', file);
       const r = await fetch('/items', { method: 'POST', body: fd });
-      if (!r.ok) { alert('Upload failed'); return; }
+      if (!r.ok) {
+        let msg = 'Upload failed';
+        try { const err = await r.json(); if (err && err.error) msg += `: ${err.error}`; } catch {}
+        alert(msg);
+        return;
+      }
       uploadForm.reset();
       fileInput.value = '';
+      selectedFile = null;
       previewWrap.classList.add('hidden');
       await loadAll();
     });
@@ -153,16 +160,14 @@
     function handleFiles(files) {
       if (!files || !files.length) return;
       const f = files[0];
-      fileInput.files = new DataTransfer().files; // reset
-      const dt = new DataTransfer();
-      dt.items.add(f);
-      fileInput.files = dt.files;
+      selectedFile = f;
       const url = URL.createObjectURL(f);
       preview.src = url; previewWrap.classList.remove('hidden');
     }
     drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('hover'); });
     drop.addEventListener('dragleave', () => drop.classList.remove('hover'));
     drop.addEventListener('drop', (e) => { e.preventDefault(); drop.classList.remove('hover'); handleFiles(e.dataTransfer.files); });
+    drop.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
 
     $("btnSearch").addEventListener("click", async () => {
